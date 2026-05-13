@@ -1,0 +1,5 @@
+from reward_gap_experiment.cli import main
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

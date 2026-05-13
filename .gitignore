@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+outputs/
+implementation_note.aux
+implementation_note.log
+implementation_note.out
+implementation_note.pdf
+implementation_note.synctex.gz
+
+*.pdf
