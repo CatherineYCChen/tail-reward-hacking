@@ -56,12 +56,11 @@ def summarize_seed(
         ))
 
     rng = np.random.default_rng(seed + 1000)
-    random_picked = (
-        randomized.groupby("prompt_id", group_keys=False)
-        .apply(lambda frame: frame.sample(n=1, random_state=int(rng.integers(0, 2**31 - 1))))
-        .reset_index(drop=True)
-        .copy()
-    )
+    random_rows = []
+    for _, frame in randomized.groupby("prompt_id", sort=True):
+        sampled = frame.sample(n=1, random_state=int(rng.integers(0, 2**31 - 1)))
+        random_rows.append(sampled)
+    random_picked = pd.concat(random_rows, ignore_index=True).copy()
     random_summary = pd.DataFrame([
         _summarize_selection(
             picked=random_picked,
