@@ -8,6 +8,8 @@ from .pipeline import analyze_real_candidates, generate_real_candidates, prepare
 
 DEFAULT_N_VALUES = [1, 2, 5, 10, 20, 50]
 DEFAULT_ANALYSIS_SEEDS = [7, 13, 29]
+DEFAULT_MIN_PROMPT_COUNT = 300
+DEFAULT_MIN_CANDIDATES_PER_PROMPT = 20
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -92,6 +94,24 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--true-model-name", type=str, default="gpt-4.1")
     score.add_argument("--device", type=str, default="auto")
     score.add_argument("--max-score-pairs", type=int, default=None)
+    score.add_argument(
+        "--min-prompt-count",
+        type=int,
+        default=DEFAULT_MIN_PROMPT_COUNT,
+        help=(
+            "Minimum number of prompts required in scored output. "
+            "Examples: Stage A=10, Stage B=20, Stage C=100, full run=300."
+        ),
+    )
+    score.add_argument(
+        "--min-candidates-per-prompt",
+        type=int,
+        default=DEFAULT_MIN_CANDIDATES_PER_PROMPT,
+        help=(
+            "Minimum scored candidates required for every prompt. "
+            "Examples: Stage A=3, Stage B=10, Stage C=20, full run=20."
+        ),
+    )
 
     analyze = subparsers.add_parser(
         "analyze",
@@ -110,6 +130,24 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--top-proxy-quantile", type=float, default=0.95)
     analyze.add_argument("--num-percentile-bins", type=int, default=20)
     analyze.add_argument("--analysis-seeds", type=int, nargs="+", default=DEFAULT_ANALYSIS_SEEDS)
+    analyze.add_argument(
+        "--min-prompt-count",
+        type=int,
+        default=DEFAULT_MIN_PROMPT_COUNT,
+        help=(
+            "Minimum number of prompts required in scored output. "
+            "Examples: Stage A=10, Stage B=20, Stage C=100, full run=300."
+        ),
+    )
+    analyze.add_argument(
+        "--min-candidates-per-prompt",
+        type=int,
+        default=DEFAULT_MIN_CANDIDATES_PER_PROMPT,
+        help=(
+            "Minimum scored candidates required for every prompt. "
+            "Examples: Stage A=3, Stage B=10, Stage C=20, full run=20."
+        ),
+    )
 
     return parser
 

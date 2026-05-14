@@ -134,7 +134,12 @@ def score_real_candidates(args: Namespace) -> None:
         _flush_scored_records(existing_frame, new_records, scored_output_file)
 
     scored_frame = load_scored_candidates(scored_output_file)
-    validate_scored_candidates(scored_frame, run_mode=args.run_mode)
+    validate_scored_candidates(
+        scored_frame,
+        run_mode=args.run_mode,
+        minimum_prompt_count=args.min_prompt_count,
+        minimum_candidates_per_prompt=args.min_candidates_per_prompt,
+    )
 
 
 def analyze_real_candidates(args: Namespace) -> None:
@@ -143,7 +148,12 @@ def analyze_real_candidates(args: Namespace) -> None:
     ensure_parent_dir(args.output_dir / "summary.csv")
 
     candidates = load_scored_candidates(input_file)
-    validate_scored_candidates(candidates, run_mode=args.run_mode)
+    validate_scored_candidates(
+        candidates,
+        run_mode=args.run_mode,
+        minimum_prompt_count=args.min_prompt_count,
+        minimum_candidates_per_prompt=args.min_candidates_per_prompt,
+    )
 
     bon_seed_frames = []
     random_seed_frames = []
@@ -181,6 +191,8 @@ def analyze_real_candidates(args: Namespace) -> None:
                 "alpha": args.alpha,
                 "top_proxy_quantile": args.top_proxy_quantile,
                 "analysis_seeds": args.analysis_seeds,
+                "min_prompt_count": args.min_prompt_count,
+                "min_candidates_per_prompt": args.min_candidates_per_prompt,
                 "failure_thresholds_by_seed": failure_thresholds,
                 "num_prompts": int(candidates["prompt_id"].nunique()),
                 "num_candidates_total": int(len(candidates)),

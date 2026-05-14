@@ -162,6 +162,10 @@ def validate_scored_candidates(
         raise ValueError("proxy_model and true_model must be different evaluators.")
     if frame[["proxy_reward", "true_reward", "gap"]].isnull().any().any():
         raise ValueError("Missing scores detected in candidates_scored.parquet.")
+    if minimum_prompt_count < 1:
+        raise ValueError("minimum_prompt_count must be at least 1.")
+    if minimum_candidates_per_prompt < 1:
+        raise ValueError("minimum_candidates_per_prompt must be at least 1.")
 
     prompt_count = int(frame["prompt_id"].nunique())
     if prompt_count < minimum_prompt_count:

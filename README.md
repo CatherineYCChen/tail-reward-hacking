@@ -63,7 +63,9 @@ OPENAI_API_KEY=... python3 experiment/run_reward_gap_experiment.py score \
   --proxy-scorer-kind hf_reward_model \
   --proxy-model-name OpenAssistant/reward-model-deberta-v3-large-v2 \
   --true-scorer-kind openai_judge \
-  --true-model-name gpt-4.1
+  --true-model-name gpt-4.1 \
+  --min-prompt-count 300 \
+  --min-candidates-per-prompt 20
 ```
 
 If you do not have an OpenAI API key, you must still use a different evaluator for `R_t`, for example:
@@ -88,7 +90,23 @@ python3 experiment/run_reward_gap_experiment.py analyze \
   --analysis-seeds 7 13 29 \
   --alpha 0.95 \
   --top-proxy-quantile 0.95 \
-  --num-percentile-bins 20
+  --num-percentile-bins 20 \
+  --min-prompt-count 300 \
+  --min-candidates-per-prompt 20
+```
+
+For staged real smoke tests, lower the thresholds explicitly. For example, Stage A can use:
+
+```bash
+python3 experiment/run_reward_gap_experiment.py score \
+  --run-mode live \
+  --output-dir outputs/stage_a \
+  --proxy-scorer-kind hf_reward_model \
+  --proxy-model-name OpenAssistant/reward-model-deberta-v3-large-v2 \
+  --true-scorer-kind openai_judge \
+  --true-model-name gpt-4.1 \
+  --min-prompt-count 10 \
+  --min-candidates-per-prompt 3
 ```
 
 ## What the analysis computes
