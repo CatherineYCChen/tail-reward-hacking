@@ -25,6 +25,8 @@ The real pipeline writes:
 - `outputs/real_run/examples_largest_gap_n*.csv`
 - `outputs/real_run/examples_largest_gap_annotated_n*.csv`
 - `outputs/real_run/examples_highest_proxy_n*.csv`
+- `outputs/real_run/manual_review_largest_gap.csv`
+- `outputs/real_run/manual_review_high_proxy.csv`
 - `outputs/real_run/qualitative_summary.txt`
 - `outputs/real_run/implementation_note_real_run.txt`
 
@@ -140,6 +142,13 @@ And exports qualitative inspection tables for each `n`:
 - `examples_highest_proxy_n{n}.csv`
 
 These make it easier to inspect whether large gaps look like genuine reward hacking or evaluator-scale mismatch.
+
+For manual labeling, the analysis also exports pooled review sheets across all `n`:
+
+- `manual_review_largest_gap.csv`
+- `manual_review_high_proxy.csv`
+
+These include blank columns for human review of factual errors, hallucinations, incomplete answers, verbose-but-shallow behavior, and style/formatting reward effects.
 
 The qualitative pass also adds lightweight heuristic annotations to the largest-gap examples, including:
 

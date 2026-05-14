@@ -32,6 +32,7 @@ from .plotting import make_all_plots
 from .qualitative import (
     add_response_length_tokens,
     summarize_candidate_correlations,
+    write_manual_review_exports,
     write_annotated_examples_and_summary,
 )
 from .scorers import build_scorer
@@ -199,6 +200,7 @@ def analyze_real_candidates(args: Namespace) -> None:
     summary_by_seed.to_csv(args.output_dir / "summary_by_seed.csv", index=False)
     percentile_summary.to_csv(args.output_dir / "gap_by_proxy_percentile.csv", index=False)
     _write_example_exports(example_selected_by_n, args.output_dir)
+    write_manual_review_exports(example_selected_by_n, args.output_dir, top_k=50)
     candidate_correlations = summarize_candidate_correlations(candidates)
     qualitative_summary = write_annotated_examples_and_summary(
         example_selected_by_n,

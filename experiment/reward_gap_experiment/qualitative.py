@@ -113,6 +113,38 @@ def write_annotated_examples_and_summary(
     return summary_stats
 
 
+def write_manual_review_exports(
+    selected_by_n: Dict[int, pd.DataFrame],
+    output_dir: Path,
+    top_k: int = 50,
+) -> None:
+    combined = _combine_selected_examples(selected_by_n)
+    if combined.empty:
+        manual_frame = _add_manual_review_columns(combined)
+        manual_frame.to_csv(output_dir / "manual_review_largest_gap.csv", index=False)
+        manual_frame.to_csv(output_dir / "manual_review_high_proxy.csv", index=False)
+        return
+
+    largest_gap = (
+        combined.sort_values(["gap", "proxy_reward"], ascending=[False, False])
+        .head(top_k)
+        .copy()
+    )
+    highest_proxy = (
+        combined.sort_values(["proxy_reward", "gap"], ascending=[False, False])
+        .head(top_k)
+        .copy()
+    )
+    _add_manual_review_columns(largest_gap).to_csv(
+        output_dir / "manual_review_largest_gap.csv",
+        index=False,
+    )
+    _add_manual_review_columns(highest_proxy).to_csv(
+        output_dir / "manual_review_high_proxy.csv",
+        index=False,
+    )
+
+
 def summarize_qualitative_patterns(frame: pd.DataFrame) -> Dict[str, float]:
     if frame.empty:
         return {
@@ -148,6 +180,46 @@ def summarize_candidate_correlations(candidates: pd.DataFrame) -> Dict[str, floa
 
 def estimate_token_count(text: str) -> int:
     return len(_WORD_RE.findall(str(text)))
+
+
+def _combine_selected_examples(selected_by_n: Dict[int, pd.DataFrame]) -> pd.DataFrame:
+    frames = []
+    for n, frame in sorted(selected_by_n.items()):
+        frames.append(frame.copy().assign(n=int(n)))
+    if not frames:
+        return pd.DataFrame(columns=_manual_review_base_columns())
+    return pd.concat(frames, ignore_index=True)
+
+
+def _add_manual_review_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    base_columns = _manual_review_base_columns()
+    work = frame.loc[:, [column for column in base_columns if column in frame.columns]].copy()
+    for column in (
+        "manual_factual_error",
+        "manual_hallucination",
+        "manual_incomplete_answer",
+        "manual_verbose_but_shallow",
+        "manual_formatting_or_style_reward",
+        "manual_notes",
+    ):
+        work[column] = ""
+    return work
+
+
+def _manual_review_base_columns() -> List[str]:
+    return [
+        "prompt",
+        "response",
+        "proxy_reward",
+        "true_reward",
+        "gap",
+        "proxy_z",
+        "true_z",
+        "gap_z",
+        "n",
+        "candidate_id",
+        "response_length_tokens",
+    ]
 
 
 def _contains_lists(text: str) -> bool:
