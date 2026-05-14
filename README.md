@@ -17,6 +17,12 @@ The real pipeline writes:
 - `outputs/real_run/plot_gap_tail.png`
 - `outputs/real_run/plot_gap_by_proxy_percentile.png`
 - `outputs/real_run/plot_random_vs_bon_tail.png`
+- `outputs/real_run/scatter_proxy_vs_true.png`
+- `outputs/real_run/scatter_proxy_vs_gap.png`
+- `outputs/real_run/histogram_gap_all_candidates.png`
+- `outputs/real_run/histogram_gap_selected_by_n.png`
+- `outputs/real_run/examples_largest_gap_n*.csv`
+- `outputs/real_run/examples_highest_proxy_n*.csv`
 - `outputs/real_run/implementation_note_real_run.txt`
 
 ## Recommended real setup
@@ -115,9 +121,22 @@ For `n in [1, 2, 5, 10, 20, 50]`, the analysis:
 
 - restricts each prompt to candidates with `candidate_id < n`
 - selects the winner with maximum proxy reward
-- reports average proxy reward, average true reward, mean gap, CVaR_95 gap, the selected-winner top proxy threshold, the global 95th percentile gap threshold, conditional failure rate, and selected count
+- reports average proxy reward, average true reward, mean gap, CVaR_95 gap, selected gap quantiles and max, top-proxy gap diagnostics, correlation diagnostics, z-normalized gap metrics, the selected-winner top proxy threshold, the global 95th percentile gap threshold, conditional failure rate, and selected count
 - compares that against a random baseline
 - repeats the analysis for at least 3 seeds via candidate-order permutation and random selection
+
+The analysis now also computes global candidate-level z-scores:
+
+- `proxy_z = zscore(proxy_reward)`
+- `true_z = zscore(true_reward)`
+- `gap_z = proxy_z - true_z`
+
+And exports qualitative inspection tables for each `n`:
+
+- `examples_largest_gap_n{n}.csv`
+- `examples_highest_proxy_n{n}.csv`
+
+These make it easier to inspect whether large gaps look like genuine reward hacking or evaluator-scale mismatch.
 
 ## Validity checks
 
@@ -144,3 +163,17 @@ Practical caveats:
 - The repository does not vendor model weights or datasets. You need working access to Hugging Face, and optionally the OpenAI API for the stronger judge path.
 - The default proxy model and generator are chosen to be relatively small, but a full 500 x 50 run is still substantial.
 - If you use the no-API fallback for `R_t`, you must choose a genuinely different evaluator and should document why it is stronger.
+
+## Stage C batch script
+
+`run_stageC.sbatch` is included for a real Stage C run with:
+
+- 100 prompts
+- 20 candidates per prompt
+- `max_new_tokens=128`
+- generator `TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+- proxy `OpenAssistant/reward-model-deberta-v3-large-v2`
+- true evaluator `Skywork/Skywork-Reward-Llama-3.1-8B-v0.2`
+- `n_values: 1 2 5 10 20`
+
+The script prepares prompts, generates candidates, scores them, and runs analysis, but it is not launched automatically.

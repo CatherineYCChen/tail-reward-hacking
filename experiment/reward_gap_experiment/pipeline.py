@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from argparse import Namespace
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import pandas as pd
 
@@ -22,7 +22,12 @@ from .data import (
     write_prompts_jsonl,
 )
 from .generation import HFGenerator, build_candidate_rows
-from .metrics import aggregate_seed_summaries, summarize_gap_by_proxy_percentile, summarize_seed
+from .metrics import (
+    add_normalized_columns,
+    aggregate_seed_summaries,
+    summarize_gap_by_proxy_percentile,
+    summarize_seed,
+)
 from .plotting import make_all_plots
 from .scorers import build_scorer
 
@@ -154,12 +159,15 @@ def analyze_real_candidates(args: Namespace) -> None:
         minimum_prompt_count=args.min_prompt_count,
         minimum_candidates_per_prompt=args.min_candidates_per_prompt,
     )
+    candidates = add_normalized_columns(candidates)
 
     bon_seed_frames = []
     random_seed_frames = []
     failure_thresholds = {}
+    example_seed = int(args.analysis_seeds[0])
+    example_selected_by_n = {}
     for seed in args.analysis_seeds:
-        bon_frame, random_frame, failure_threshold = summarize_seed(
+        bon_frame, random_frame, failure_threshold, selected_by_n = summarize_seed(
             candidates=candidates,
             n_values=args.n_values,
             alpha=args.alpha,
@@ -169,6 +177,8 @@ def analyze_real_candidates(args: Namespace) -> None:
         bon_seed_frames.append(bon_frame)
         random_seed_frames.append(random_frame)
         failure_thresholds[int(seed)] = float(failure_threshold)
+        if int(seed) == example_seed:
+            example_selected_by_n = selected_by_n
 
     bon_by_seed = pd.concat(bon_seed_frames, ignore_index=True)
     random_by_seed = pd.concat(random_seed_frames, ignore_index=True)
@@ -182,6 +192,7 @@ def analyze_real_candidates(args: Namespace) -> None:
     summary.to_csv(args.output_dir / "summary.csv", index=False)
     summary_by_seed.to_csv(args.output_dir / "summary_by_seed.csv", index=False)
     percentile_summary.to_csv(args.output_dir / "gap_by_proxy_percentile.csv", index=False)
+    _write_example_exports(example_selected_by_n, args.output_dir)
 
     with (args.output_dir / "summary.json").open("w") as handle:
         json.dump(
@@ -191,6 +202,7 @@ def analyze_real_candidates(args: Namespace) -> None:
                 "alpha": args.alpha,
                 "top_proxy_quantile": args.top_proxy_quantile,
                 "analysis_seeds": args.analysis_seeds,
+                "example_seed": example_seed,
                 "min_prompt_count": args.min_prompt_count,
                 "min_candidates_per_prompt": args.min_candidates_per_prompt,
                 "failure_thresholds_by_seed": failure_thresholds,
@@ -212,6 +224,8 @@ def analyze_real_candidates(args: Namespace) -> None:
         bon_summary=bon_summary,
         random_summary=random_summary,
         percentile_summary=percentile_summary,
+        all_candidates=candidates,
+        selected_by_n=example_selected_by_n,
         output_dir=args.output_dir,
     )
 
@@ -249,3 +263,32 @@ def _build_implementation_note(candidates: pd.DataFrame) -> str:
         "the proxy scores came from the listed real proxy evaluator, the true scores came from the\n"
         "separate listed true evaluator, and no synthetic rewards were used.\n"
     ) % (generator_model, proxy_model, true_model)
+
+
+def _write_example_exports(selected_by_n: Dict[int, pd.DataFrame], output_dir: Path) -> None:
+    example_columns = [
+        "prompt",
+        "response",
+        "proxy_reward",
+        "true_reward",
+        "gap",
+        "proxy_z",
+        "true_z",
+        "gap_z",
+        "candidate_id",
+    ]
+    for n, frame in selected_by_n.items():
+        largest_gap = (
+            frame.sort_values(["gap", "proxy_reward"], ascending=[False, False])
+            .head(10)
+            .loc[:, example_columns]
+            .copy()
+        )
+        highest_proxy = (
+            frame.sort_values(["proxy_reward", "gap"], ascending=[False, False])
+            .head(10)
+            .loc[:, example_columns]
+            .copy()
+        )
+        largest_gap.to_csv(output_dir / ("examples_largest_gap_n%d.csv" % n), index=False)
+        highest_proxy.to_csv(output_dir / ("examples_highest_proxy_n%d.csv" % n), index=False)
