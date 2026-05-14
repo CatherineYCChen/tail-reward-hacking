@@ -134,15 +134,24 @@ def require_live_or_replay_real(run_mode: str) -> None:
 
 
 def validate_natural_language_response(text: str) -> bool:
-    lowered = text.strip().lower()
-    if len(lowered) < 20:
+    stripped = text.strip()
+    lowered = stripped.lower()
+    if not lowered:
         return False
     if any(marker in lowered for marker in _PLACEHOLDER_MARKERS):
         return False
-    normalized = _NON_WORD_RE.sub(" ", text).strip()
+    normalized = _NON_WORD_RE.sub(" ", stripped).strip()
     tokens = [token for token in normalized.split() if token]
     alpha_tokens = [token for token in tokens if any(char.isalpha() for char in token)]
-    return len(alpha_tokens) >= 5
+    if not alpha_tokens:
+        return False
+    if len(alpha_tokens) >= 2:
+        return True
+
+    # Allow concise but natural one-word or label-style answers such as
+    # "Yes", "Read", or quoted taglines, while still rejecting empty/noisy text.
+    alpha_chars = sum(1 for char in stripped if char.isalpha())
+    return alpha_chars >= 3
 
 
 def validate_scored_candidates(

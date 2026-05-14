@@ -128,7 +128,7 @@ The pipeline fails if any of the following are false:
 - there are at least 300 prompts with scored candidates
 - each prompt has at least 20 candidates
 - no score is missing
-- scored responses look like real natural language rather than placeholders or synthetic strings
+- scored responses pass placeholder/non-language screening, including short real answers
 
 ## Caveats
 
