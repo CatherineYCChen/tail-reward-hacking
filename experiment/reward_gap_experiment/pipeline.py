@@ -29,6 +29,11 @@ from .metrics import (
     summarize_seed,
 )
 from .plotting import make_all_plots
+from .qualitative import (
+    add_response_length_tokens,
+    summarize_candidate_correlations,
+    write_annotated_examples_and_summary,
+)
 from .scorers import build_scorer
 
 
@@ -160,6 +165,7 @@ def analyze_real_candidates(args: Namespace) -> None:
         minimum_candidates_per_prompt=args.min_candidates_per_prompt,
     )
     candidates = add_normalized_columns(candidates)
+    candidates = add_response_length_tokens(candidates)
 
     bon_seed_frames = []
     random_seed_frames = []
@@ -193,6 +199,12 @@ def analyze_real_candidates(args: Namespace) -> None:
     summary_by_seed.to_csv(args.output_dir / "summary_by_seed.csv", index=False)
     percentile_summary.to_csv(args.output_dir / "gap_by_proxy_percentile.csv", index=False)
     _write_example_exports(example_selected_by_n, args.output_dir)
+    candidate_correlations = summarize_candidate_correlations(candidates)
+    qualitative_summary = write_annotated_examples_and_summary(
+        example_selected_by_n,
+        args.output_dir,
+        candidate_correlations,
+    )
 
     with (args.output_dir / "summary.json").open("w") as handle:
         json.dump(
@@ -211,6 +223,8 @@ def analyze_real_candidates(args: Namespace) -> None:
                 "generator_model": str(candidates["generator_model"].iloc[0]),
                 "proxy_model": str(candidates["proxy_model"].iloc[0]),
                 "true_model": str(candidates["true_model"].iloc[0]),
+                "candidate_correlations": candidate_correlations,
+                "qualitative_summary": qualitative_summary,
                 "summary": summary.to_dict(orient="records"),
                 "summary_by_seed": summary_by_seed.to_dict(orient="records"),
             },

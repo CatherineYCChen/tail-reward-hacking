@@ -127,3 +127,12 @@ def make_all_plots(
     fig.tight_layout()
     fig.savefig(output_dir / "histogram_gap_selected_by_n.png", dpi=180)
     plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.scatter(all_candidates["response_length_tokens"], all_candidates["gap"], alpha=0.35, s=16)
+    ax.set_xlabel("Response length tokens")
+    ax.set_ylabel("Gap")
+    ax.set_title("Gap vs response length")
+    fig.tight_layout()
+    fig.savefig(output_dir / "gap_vs_response_length.png", dpi=180)
+    plt.close(fig)

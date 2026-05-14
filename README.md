@@ -19,10 +19,13 @@ The real pipeline writes:
 - `outputs/real_run/plot_random_vs_bon_tail.png`
 - `outputs/real_run/scatter_proxy_vs_true.png`
 - `outputs/real_run/scatter_proxy_vs_gap.png`
+- `outputs/real_run/gap_vs_response_length.png`
 - `outputs/real_run/histogram_gap_all_candidates.png`
 - `outputs/real_run/histogram_gap_selected_by_n.png`
 - `outputs/real_run/examples_largest_gap_n*.csv`
+- `outputs/real_run/examples_largest_gap_annotated_n*.csv`
 - `outputs/real_run/examples_highest_proxy_n*.csv`
+- `outputs/real_run/qualitative_summary.txt`
 - `outputs/real_run/implementation_note_real_run.txt`
 
 ## Recommended real setup
@@ -137,6 +140,17 @@ And exports qualitative inspection tables for each `n`:
 - `examples_highest_proxy_n{n}.csv`
 
 These make it easier to inspect whether large gaps look like genuine reward hacking or evaluator-scale mismatch.
+
+The qualitative pass also adds lightweight heuristic annotations to the largest-gap examples, including:
+
+- response length in tokens
+- list/number/equation markers
+- confident vs uncertain language
+- factual inconsistency heuristics
+- hallucinated technical-detail heuristics
+- verbosity, repetition, and formatting-quality heuristics
+
+No LLM-based labeling is used for this step.
 
 ## Validity checks
 
