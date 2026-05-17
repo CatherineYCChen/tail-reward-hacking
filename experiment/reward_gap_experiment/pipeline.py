@@ -96,6 +96,7 @@ def score_real_candidates(args: Namespace) -> None:
     require_live_or_replay_real(args.run_mode)
     input_file = args.input_file or (args.output_dir / "candidates_raw.jsonl")
     scored_output_file = args.scored_output_file or (args.output_dir / "candidates_scored.parquet")
+    warnings_output_file = args.output_dir / "validation_warnings.csv"
 
     raw_rows = load_candidate_rows(input_file)
     if not raw_rows:
@@ -150,6 +151,7 @@ def score_real_candidates(args: Namespace) -> None:
         run_mode=args.run_mode,
         minimum_prompt_count=args.min_prompt_count,
         minimum_candidates_per_prompt=args.min_candidates_per_prompt,
+        warnings_output_file=warnings_output_file,
     )
 
 
@@ -157,6 +159,7 @@ def analyze_real_candidates(args: Namespace) -> None:
     require_live_or_replay_real(args.run_mode)
     input_file = args.input_file or (args.output_dir / "candidates_scored.parquet")
     ensure_parent_dir(args.output_dir / "summary.csv")
+    warnings_output_file = args.output_dir / "validation_warnings.csv"
 
     candidates = load_scored_candidates(input_file)
     validate_scored_candidates(
@@ -164,6 +167,7 @@ def analyze_real_candidates(args: Namespace) -> None:
         run_mode=args.run_mode,
         minimum_prompt_count=args.min_prompt_count,
         minimum_candidates_per_prompt=args.min_candidates_per_prompt,
+        warnings_output_file=warnings_output_file,
     )
     candidates = add_normalized_columns(candidates)
     candidates = add_response_length_tokens(candidates)

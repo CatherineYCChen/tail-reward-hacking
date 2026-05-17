@@ -27,6 +27,7 @@ The real pipeline writes:
 - `outputs/real_run/examples_highest_proxy_n*.csv`
 - `outputs/real_run/manual_review_largest_gap.csv`
 - `outputs/real_run/manual_review_high_proxy.csv`
+- `outputs/real_run/validation_warnings.csv`
 - `outputs/real_run/qualitative_summary.txt`
 - `outputs/real_run/implementation_note_real_run.txt`
 
@@ -170,7 +171,7 @@ The pipeline fails if any of the following are false:
 - there are at least 300 prompts with scored candidates
 - each prompt has at least 20 candidates
 - no score is missing
-- scored responses pass placeholder/non-language screening, including short real answers
+- scored responses must not be empty or clear synthetic placeholders; borderline cases are logged to `validation_warnings.csv`
 
 ## Caveats
 

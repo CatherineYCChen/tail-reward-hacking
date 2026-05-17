@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 import pandas as pd
 
@@ -34,12 +34,14 @@ REQUIRED_SCORED_COLUMNS = {
 }
 
 _NON_WORD_RE = re.compile(r"[^A-Za-z0-9]+")
-_PLACEHOLDER_MARKERS = (
-    "synthetic",
-    "placeholder",
-    "lorem ipsum",
-    "dummy response",
-    "todo",
+_CLEAR_PLACEHOLDER_PATTERNS = (
+    re.compile(r"\bsynthetic response q\s*=", re.IGNORECASE),
+    re.compile(r"\bplaceholder\b", re.IGNORECASE),
+    re.compile(r"\blorem ipsum\b", re.IGNORECASE),
+    re.compile(r"\btodo\b", re.IGNORECASE),
+    re.compile(r"^\s*<response>\s*$", re.IGNORECASE),
+    re.compile(r"^\s*\[response\]\s*$", re.IGNORECASE),
+    re.compile(r"\bgenerated response placeholder\b", re.IGNORECASE),
 )
 
 
@@ -133,25 +135,35 @@ def require_live_or_replay_real(run_mode: str) -> None:
         raise ValueError("run_mode must be 'live' or 'replay_real'; synthetic mode is forbidden.")
 
 
-def validate_natural_language_response(text: str) -> bool:
+def classify_response_validation(text: str) -> Tuple[str, str]:
     stripped = text.strip()
     lowered = stripped.lower()
     if not lowered:
-        return False
-    if any(marker in lowered for marker in _PLACEHOLDER_MARKERS):
-        return False
+        return "error", "empty_response"
+    for pattern in _CLEAR_PLACEHOLDER_PATTERNS:
+        if pattern.search(stripped):
+            return "error", "clear_synthetic_placeholder"
+
     normalized = _NON_WORD_RE.sub(" ", stripped).strip()
     tokens = [token for token in normalized.split() if token]
     alpha_tokens = [token for token in tokens if any(char.isalpha() for char in token)]
+    if stripped.startswith(("\"", "'", "“", "‘", "`")):
+        return "valid", ""
+    if stripped.startswith(("```", "-", "*", "+")) or "\n-" in stripped or "\n*" in stripped:
+        return "valid", ""
     if not alpha_tokens:
-        return False
+        if any(char.isdigit() for char in stripped):
+            return "warning", "numeric_or_symbolic_response"
+        return "warning", "no_alpha_tokens"
     if len(alpha_tokens) >= 2:
-        return True
+        return "valid", ""
 
     # Allow concise but natural one-word or label-style answers such as
-    # "Yes", "Read", or quoted taglines, while still rejecting empty/noisy text.
+    # slogans, labels, or short factual responses.
     alpha_chars = sum(1 for char in stripped if char.isalpha())
-    return alpha_chars >= 3
+    if alpha_chars >= 3:
+        return "valid", ""
+    return "warning", "very_short_response"
 
 
 def validate_scored_candidates(
@@ -159,7 +171,8 @@ def validate_scored_candidates(
     run_mode: str,
     minimum_prompt_count: int = 300,
     minimum_candidates_per_prompt: int = 20,
-) -> None:
+    warnings_output_file: Optional[Path] = None,
+) -> pd.DataFrame:
     require_live_or_replay_real(run_mode)
     if frame.empty:
         raise ValueError("No scored candidates found.")
@@ -188,13 +201,30 @@ def validate_scored_candidates(
             % (minimum_candidates_per_prompt, list(too_small.index[:10]))
         )
 
-    invalid_mask = ~frame["response"].astype(str).map(validate_natural_language_response)
-    if invalid_mask.any():
-        sample_bad = frame.loc[invalid_mask, ["prompt_id", "candidate_id", "response"]].head(3)
+    validation_results = frame["response"].astype(str).map(classify_response_validation)
+    validation_status = validation_results.map(lambda item: item[0])
+    validation_reason = validation_results.map(lambda item: item[1])
+
+    error_mask = validation_status == "error"
+    if error_mask.any():
+        sample_bad = frame.loc[error_mask, ["prompt_id", "candidate_id", "response"]].copy().head(3)
+        sample_bad["reason"] = validation_reason.loc[sample_bad.index].tolist()
         raise ValueError(
-            "Found placeholder or non-natural-language responses in scored data: %s"
+            "Found clear synthetic placeholder or empty responses in scored data: %s"
             % sample_bad.to_dict(orient="records")
         )
+
+    warning_mask = validation_status == "warning"
+    warnings_frame = frame.loc[
+        warning_mask,
+        ["prompt_id", "candidate_id", "prompt", "response"],
+    ].copy()
+    if not warnings_frame.empty:
+        warnings_frame["warning_reason"] = validation_reason.loc[warnings_frame.index].tolist()
+    if warnings_output_file is not None:
+        ensure_parent_dir(warnings_output_file)
+        warnings_frame.to_csv(warnings_output_file, index=False)
+    return warnings_frame
 
 
 def load_real_dataset_prompts(
